@@ -1,11 +1,21 @@
 Package: wellbeingHe
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Analyse data well-being in HE (and beyond!)
+Version: 0.0.0.9000
+Authors@R: 
+    person("Oliver", "Cassagneau-Francis", , "ollie.francis@gmail.com", 
+        role = c("aut", "cre"), comment = c(ORCID = "0000-0002-1133-0617"))
+Description: This package contains the data and code needed to investigate 
+    wellbeing at and after university. 
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
 Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
 LazyData: true
+Depends: 
+    R (>= 2.10)
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
