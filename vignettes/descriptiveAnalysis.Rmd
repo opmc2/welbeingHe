@@ -1,0 +1,142 @@
+---
+title: "descriptiveAnalysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{descriptiveAnalysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+# library(wellbeingHe)
+devtools::load_all()
+
+library(ggplot2)
+library(data.table)
+library(tidyverse)
+```
+
+## Wellbeing by age and education
+
+```{r create vars}
+
+# make data.table
+dtUkhls$qfhigh_dv <- as.factor(dtUkhls$qfhigh_dv)
+dtUkhls <- as.data.table(dtUkhls)
+
+# make qfhigh_dv factor and label
+dtUkhls[, qfhigh_dv := factor(
+  qfhigh_dv, 
+  levels = c(-9, -8, 1:16, 96), 
+  labels = c(
+     "missing",
+     "inapplicable",
+     "Higher degree",
+     "1st degree or equivalent",
+     "Diploma in he",
+     "Teaching qual not pgce",
+     "Nursing/other med qual",
+     "Other higher degree",
+     "A level",
+     "Welsh baccalaureate",
+     "I'nationl baccalaureate",
+     "AS level",
+     "Highers (scot)",
+     "Cert 6th year studies",
+     "GCSE/O level",
+     "CSE",
+     "Standard/o/lower",
+     "Other school cert",
+     "None of the above"
+  )
+)]
+
+# define new hiqual var with fewer levels (3: GCSE or below, more than GCSEs no degree, degree or more)
+dtUkhls[, hiqual_3levels := fcase(
+  qfhigh_dv %in% c("Higher degree", "1st degree or equivalent"), 3,
+  qfhigh_dv %in% c(
+    "Diploma in he",
+     "Teaching qual not pgce",
+     "Nursing/other med qual",
+     "Other higher degree",
+     "A level",
+     "Welsh baccalaureate",
+     "I'nationl baccalaureate",
+     "AS level",
+     "Highers (scot)",
+     "Cert 6th year studies"
+  ), 2,
+  qfhigh_dv %in% c(
+    "GCSE/O level",
+    "CSE",
+    "Standard/o/lower",
+    "Other school cert"
+  ), 1
+)][, hiqual_3levels := factor(hiqual_3levels, levels = 1:3, 
+                              labels = c("GCSE or lower",
+                                         ">GCSE, no degree",
+                                         "Degree or higher"))]
+
+```
+
+```{r create dtWellbeing}
+
+dtWellbeing <- dtUkhls[, .(
+  ghq36 = mean(scghq1_dv, na.rm = T),
+  ghq12 = mean(scghq2_dv, na.rm = T),
+  jbAnx = mean(jwbs1_dv, na.rm = T),
+  jbDepr = mean(jwbs2_dv, na.rm = T)
+), by = .(age_dv, hiqual_3levels)][order(hiqual_3levels, age_dv)]
+```
+
+```{r plot wellbeing by age and educ}
+
+ggplot(
+  data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
+  mapping = aes(x = age_dv, y = ghq36, linetype = hiqual_3levels)
+) + 
+  geom_line() +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "GHQ (higher = worse)") +
+  scale_linetype_discrete(name = "Highest qualification") +
+  cowplot::theme_cowplot() +
+  theme(legend.position = c(.7, .15))
+
+```
+
+```{r plot job contentment by age and educ}
+
+ggplot(
+  data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
+  mapping = aes(x = age_dv, y = jbAnx, linetype = hiqual_3levels)
+) + 
+  geom_line() +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "Job-rel. anxiety (higher = better)") +
+  scale_linetype_discrete(name = "Highest qualification") +
+  cowplot::theme_cowplot() +
+  theme(legend.position = c(.7, .15))
+
+```
+
+```{r plot job enthusiasm by age and educ}
+
+ggplot(
+  data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
+  mapping = aes(x = age_dv, y = jbDepr, linetype = hiqual_3levels)
+) + 
+  geom_line() +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "Job-rel. depression (higher = better)") +
+  scale_linetype_discrete(name = "Highest qualification") +
+  cowplot::theme_cowplot() +
+  theme(legend.position = c(.7, .15))
+
+```
