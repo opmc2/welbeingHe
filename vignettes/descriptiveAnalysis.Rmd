@@ -23,7 +23,7 @@ library(data.table)
 library(tidyverse)
 ```
 
-## Wellbeing by age and education
+# Wellbeing by age and education
 
 ```{r create vars}
 
@@ -79,10 +79,16 @@ dtUkhls[, hiqual_3levels := fcase(
     "Standard/o/lower",
     "Other school cert"
   ), 1
-)][, hiqual_3levels := factor(hiqual_3levels, levels = 1:3, 
+)][
+  , hiqual_3levels := factor(hiqual_3levels, levels = 1:3, 
                               labels = c("GCSE or lower",
                                          ">GCSE, no degree",
-                                         "Degree or higher"))]
+                                         "Degree or higher"))
+  ][
+    , logHhInc := fcase(
+      fihhmnnet1_dv > 0, log(fihhmnnet1_dv)
+    )
+  ]
 
 ```
 
@@ -92,11 +98,15 @@ dtWellbeing <- dtUkhls[, .(
   ghq36 = mean(scghq1_dv, na.rm = T),
   ghq12 = mean(scghq2_dv, na.rm = T),
   jbAnx = mean(jwbs1_dv, na.rm = T),
-  jbDepr = mean(jwbs2_dv, na.rm = T)
+  jbDepr = mean(jwbs2_dv, na.rm = T),
+  lifeSat = mean(sclfsato, na.rm = T)
 ), by = .(age_dv, hiqual_3levels)][order(hiqual_3levels, age_dv)]
 ```
 
-```{r plot wellbeing by age and educ}
+## Plots of different measures of wellbeing
+
+### General health questionnaire (GHQ) 36 questions
+```{r plot ghq36 by age and educ}
 
 ggplot(
   data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
@@ -111,6 +121,24 @@ ggplot(
 
 ```
 
+### GHQ 12
+```{r plot ghq12 by age and educ}
+
+ggplot(
+  data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
+  mapping = aes(x = age_dv, y = ghq12, linetype = hiqual_3levels)
+) + 
+  geom_line() +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "GHQ (higher = worse)") +
+  scale_linetype_discrete(name = "Highest qualification") +
+  cowplot::theme_cowplot() +
+  theme(legend.position = c(.7, .15))
+
+```
+
+### Job-related anxiety-contentment scale (Carr, 1990)
+
 ```{r plot job contentment by age and educ}
 
 ggplot(
@@ -122,10 +150,10 @@ ggplot(
   scale_y_continuous(name = "Job-rel. anxiety (higher = better)") +
   scale_linetype_discrete(name = "Highest qualification") +
   cowplot::theme_cowplot() +
-  theme(legend.position = c(.7, .15))
+  theme(legend.position = c(.6, .15))
 
 ```
-
+### Job-related depression-enthusiasm scale (Carr, 1990)
 ```{r plot job enthusiasm by age and educ}
 
 ggplot(
@@ -137,6 +165,98 @@ ggplot(
   scale_y_continuous(name = "Job-rel. depression (higher = better)") +
   scale_linetype_discrete(name = "Highest qualification") +
   cowplot::theme_cowplot() +
-  theme(legend.position = c(.7, .15))
+  theme(legend.position = c(.6, .15))
 
+```
+
+### General life satisfaction
+```{r plot life sat by age and educ}
+
+ggplot(
+  data = dtWellbeing[age_dv %in% 25:65 & !is.na(hiqual_3levels)],
+  mapping = aes(x = age_dv, y = lifeSat, linetype = hiqual_3levels)
+) + 
+  geom_line() +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "Life satisfaction (higher = better)") +
+  scale_linetype_discrete(name = "Highest qualification") +
+  cowplot::theme_cowplot() +
+  theme(legend.position = c(.6, .15))
+
+```
+
+## Regressions
+
+$$
+
+wellbeing_i = \alpha + \beta_1 age_i + \beta_2 educ_i + \varepsilon_i \\
+wellbeing_i = \alpha + \beta_1 age_i + \beta_2 educ_i + \beta_3 \log(income)_i + \varepsilon_i
+
+$$
+
+### GHQ 36 and 12
+```{r regress GHQ on age and education}
+
+lmGhq36 <- lm(
+  formula = scghq1_dv ~ age_dv + hiqual_3levels,
+  data = dtUkhls
+)
+
+summary(lmGhq36)
+
+lmGhq12 <- lm(
+  formula = scghq2_dv ~ age_dv + hiqual_3levels,
+  data = dtUkhls
+)
+
+summary(lmGhq12)
+
+```
+
+### Carr (1990) job wellbeing scales
+```{r regress job anx-cont scale}
+
+lmJbAnx <- lm(
+  formula = jwbs1_dv ~ age_dv + hiqual_3levels,
+  data = dtUkhls
+)
+
+summary(lmJbAnx)
+
+lmJbAnxInc <- lm(
+  formula = jwbs1_dv ~ age_dv + hiqual_3levels + logHhInc,
+  data = dtUkhls
+)
+
+summary(lmJbAnxInc)
+
+lmJbDeprInc <- lm(
+  formula = jwbs2_dv ~ age_dv + hiqual_3levels + logHhInc,
+  data = dtUkhls
+)
+
+summary(lmJbDeprInc)
+
+```
+
+### General life satisfaction
+
+```{r regress gen life sat scale}
+
+
+lmLifeSat <- lm(
+  formula = sclfsato ~ age_dv + hiqual_3levels,
+  data = dtUkhls
+)
+
+summary(lmLifeSat)
+
+lmLifeSatInc <- lm(
+  formula = sclfsato ~ age_dv + hiqual_3levels + logHhInc,
+  data = dtUkhls
+)
+
+summary(lmLifeSatInc)
+
+dtUkhls[, sd(sclfsato, na.rm = TRUE)]
 ```
